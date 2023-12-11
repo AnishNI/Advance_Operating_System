@@ -1,0 +1,115 @@
+slip 3
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+void printFileProperties(char *filename) {
+    struct stat fileInfo;
+
+    if (stat(filename, &fileInfo) == 0) {
+        printf("File: %s\n", filename);
+        printf("Inode Number: %ld\n", (long)fileInfo.st_ino);
+
+        if (S_ISREG(fileInfo.st_mode))
+            printf("File Type: Regular File\n");
+        else if (S_ISDIR(fileInfo.st_mode))
+            printf("File Type: Directory\n");
+        else if (S_ISLNK(fileInfo.st_mode))
+            printf("File Type: Symbolic Link\n");
+        else
+            printf("File Type: Other\n");
+
+        printf("\n");
+    } else {
+        perror("Error while getting file information");
+    }
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    printFileProperties(argv[1]);
+
+    return EXIT_SUCCESS;
+}
+
+gcc your_program_name.c -o your_program_name
+./your_program_name <filename>
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <signal.h>
+
+// Variable to store the child process ID
+pid_t childPid = -1;
+
+// Signal handler for SIGCHLD (death of child)
+void sigchldHandler(int signum) {
+    if (signum == SIGCHLD) {
+        int status;
+        pid_t terminatedChild = waitpid(childPid, &status, WNOHANG);
+
+        if (terminatedChild > 0) {
+            if (WIFEXITED(status)) {
+                printf("Child process terminated normally with exit code %d\n", WEXITSTATUS(status));
+            } else if (WIFSIGNALED(status)) {
+                printf("Child process terminated by signal %d\n", WTERMSIG(status));
+            }
+            exit(EXIT_SUCCESS);
+        }
+    }
+}
+
+// Signal handler for SIGALRM (alarm)
+void sigalarmHandler(int signum) {
+    if (signum == SIGALRM) {
+        printf("Timeout: Child process takes too long. Killing the child process.\n");
+        kill(childPid, SIGKILL);
+    }
+}
+
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <command>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    // Set up signal handlers
+    signal(SIGCHLD, sigchldHandler);
+    signal(SIGALRM, sigalarmHandler);
+
+    // Fork a child process
+    childPid = fork();
+
+    if (childPid == -1) {
+        perror("Fork failed");
+        return EXIT_FAILURE;
+    } else if (childPid == 0) {
+        // Child process
+        execvp(argv[1], &argv[1]);
+        perror("Exec failed");
+        exit(EXIT_FAILURE);
+    } else {
+        // Parent process
+        // Set an alarm for 5 seconds
+        alarm(5);
+
+        // Wait for the child process to complete
+        waitpid(childPid, NULL, 0);
+    }
+
+    return EXIT_SUCCESS;
+}
+
+gcc your_program_name.c -o your_program_name
+./your_program_name <command>

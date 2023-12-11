@@ -1,0 +1,89 @@
+slip 23
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+int fileExists(const char *filename) {
+    // Access the file using access system call
+    if (access(filename, F_OK) != -1) {
+        return 1; // File exists
+    } else {
+        return 0; // File does not exist
+    }
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    const char *filename = argv[1];
+
+    if (fileExists(filename)) {
+        printf("File '%s' exists in the current directory.\n", filename);
+    } else {
+        printf("File '%s' does not exist in the current directory.\n", filename);
+    }
+
+    return EXIT_SUCCESS;
+}
+
+
+gcc your_program_name.c -o your_program_name
+./your_program_name your_filename
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+void identifyFileType(const char *filename) {
+    struct stat fileStat;
+
+    // Use stat to get information about the file
+    if (stat(filename, &fileStat) == -1) {
+        perror("Error getting file information");
+        return;
+    }
+
+    // Determine the file type
+    if (S_ISREG(fileStat.st_mode)) {
+        printf("File type: Regular File\n");
+    } else if (S_ISDIR(fileStat.st_mode)) {
+        printf("File type: Directory\n");
+    } else if (S_ISCHR(fileStat.st_mode)) {
+        printf("File type: Character Device\n");
+    } else if (S_ISBLK(fileStat.st_mode)) {
+        printf("File type: Block Device\n");
+    } else if (S_ISFIFO(fileStat.st_mode)) {
+        printf("File type: FIFO or Pipe\n");
+    } else if (S_ISLNK(fileStat.st_mode)) {
+        printf("File type: Symbolic Link\n");
+    } else if (S_ISSOCK(fileStat.st_mode)) {
+        printf("File type: Socket\n");
+    } else {
+        printf("File type: Unknown\n");
+    }
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    const char *filename = argv[1];
+
+    printf("Identifying the type of file: %s\n", filename);
+    identifyFileType(filename);
+
+    return EXIT_SUCCESS;
+}
+
+gcc your_program_name.c -o your_program_name
+./your_program_name your_filename

@@ -1,0 +1,95 @@
+slip 4
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+int main(int argc, char *argv[]) {
+    // Check if at least one file name is provided
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <file1> [file2] [file3] ...\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    // Iterate through the command line arguments
+    for (int i = 1; i < argc; ++i) {
+        // Check if the file exists in the current directory
+        if (access(argv[i], F_OK) != -1) {
+            printf("File %s exists in the current directory.\n", argv[i]);
+        } else {
+            printf("File %s does not exist in the current directory.\n", argv[i]);
+        }
+    }
+
+    return EXIT_SUCCESS;
+}
+
+
+gcc your_program_name.c -o your_program_name
+./your_program_name file1 file2 file3
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+// Variable to store the child process ID
+pid_t childPid = -1;
+
+// Signal handler for SIGHUP, SIGINT, and SIGQUIT
+void signalHandler(int signum) {
+    if (signum == SIGHUP) {
+        printf("Child process received SIGHUP signal.\n");
+    } else if (signum == SIGINT) {
+        printf("Child process received SIGINT signal.\n");
+    } else if (signum == SIGQUIT) {
+        printf("Child process received SIGQUIT signal. My Papa has Killed me!!!\n");
+        exit(EXIT_SUCCESS);
+    }
+}
+
+int main() {
+    // Fork a child process
+    childPid = fork();
+
+    if (childPid == -1) {
+        perror("Fork failed");
+        return EXIT_FAILURE;
+    } else if (childPid == 0) {
+        // Child process
+        signal(SIGHUP, signalHandler);
+        signal(SIGINT, signalHandler);
+        signal(SIGQUIT, signalHandler);
+
+        while (1) {
+            // Child process is waiting for signals
+            sleep(1);
+        }
+    } else {
+        // Parent process
+        // Send SIGHUP or SIGINT every 3 seconds for 12 seconds
+        for (int i = 0; i < 4; ++i) {
+            sleep(3);
+            if (i % 2 == 0) {
+                kill(childPid, SIGHUP);
+            } else {
+                kill(childPid, SIGINT);
+            }
+        }
+
+        // Send SIGQUIT after 15 seconds
+        sleep(3);
+        kill(childPid, SIGQUIT);
+
+        // Wait for the child process to complete
+        waitpid(childPid, NULL, 0);
+    }
+
+    return EXIT_SUCCESS;
+}
+
+gcc your_program_name.c -o your_program_name
+./your_program_name

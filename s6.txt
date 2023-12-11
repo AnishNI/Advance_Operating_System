@@ -1,0 +1,112 @@
+slip 6
+#include <stdio.h>
+#include <stdlib.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <time.h>
+
+void displayFilesInMonth(const char *month) {
+    DIR *dir = opendir(".");
+    if (dir == NULL) {
+        perror("Error opening current directory");
+        exit(EXIT_FAILURE);
+    }
+
+    struct dirent *entry;
+    struct stat fileInfo;
+
+    while ((entry = readdir(dir)) != NULL) {
+        if (stat(entry->d_name, &fileInfo) == 0) {
+            struct tm *creationTime = localtime(&fileInfo.st_ctime);
+
+            // Check if the file was created in the specified month
+            if (creationTime->tm_mon == 0 && strcmp(month, "Jan") == 0 ||
+                creationTime->tm_mon == 1 && strcmp(month, "Feb") == 0 ||
+                creationTime->tm_mon == 2 && strcmp(month, "Mar") == 0 ||
+                creationTime->tm_mon == 3 && strcmp(month, "Apr") == 0 ||
+                creationTime->tm_mon == 4 && strcmp(month, "May") == 0 ||
+                creationTime->tm_mon == 5 && strcmp(month, "Jun") == 0 ||
+                creationTime->tm_mon == 6 && strcmp(month, "Jul") == 0 ||
+                creationTime->tm_mon == 7 && strcmp(month, "Aug") == 0 ||
+                creationTime->tm_mon == 8 && strcmp(month, "Sep") == 0 ||
+                creationTime->tm_mon == 9 && strcmp(month, "Oct") == 0 ||
+                creationTime->tm_mon == 10 && strcmp(month, "Nov") == 0 ||
+                creationTime->tm_mon == 11 && strcmp(month, "Dec") == 0) {
+                printf("%s\n", entry->d_name);
+            }
+        }
+    }
+
+    closedir(dir);
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <month>\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
+    displayFilesInMonth(argv[1]);
+
+    return EXIT_SUCCESS;
+}
+
+
+gcc your_program_name.c -o your_program_name
+./your_program_name Dec  # Replace "Dec" with the desired month abbreviation
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/resource.h>
+#include <unistd.h>
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <number_of_children>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    int numChildren = atoi(argv[1]);
+
+    struct rusage childUsage;
+    int status;
+
+    for (int i = 0; i < numChildren; ++i) {
+        pid_t pid = fork();
+
+        if (pid == -1) {
+            perror("Fork failed");
+            return EXIT_FAILURE;
+        } else if (pid == 0) {
+            // Child process
+            // Do some work in the child process (e.g., sleep for a random duration)
+            srand(getpid());
+            int sleepTime = rand() % 5 + 1;
+            sleep(sleepTime);
+            exit(EXIT_SUCCESS);
+        }
+    }
+
+    // Wait for all child processes to terminate
+    while (wait(&status) > 0) {
+        // Do nothing, just wait
+    }
+
+    // Get cumulative time spent in user and kernel mode by all child processes
+    getrusage(RUSAGE_CHILDREN, &childUsage);
+
+    printf("Total User Time: %ld seconds, %ld microseconds\n", childUsage.ru_utime.tv_sec, childUsage.ru_utime.tv_usec);
+    printf("Total Kernel Time: %ld seconds, %ld microseconds\n", childUsage.ru_stime.tv_sec, childUsage.ru_stime.tv_usec);
+
+    return EXIT_SUCCESS;
+}
+
+
+gcc your_program_name.c -o your_program_name
+./your_program_name 5  # Replace 5 with the desired number of child processes
+
+

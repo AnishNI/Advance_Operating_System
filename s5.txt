@@ -1,0 +1,93 @@
+slip 5
+#include <stdio.h>
+#include <stdlib.h>
+#include <dirent.h>
+
+int main() {
+    // Open the current directory
+    DIR *dir = opendir(".");
+
+    if (dir == NULL) {
+        perror("Error opening current directory");
+        return EXIT_FAILURE;
+    }
+
+    struct dirent *entry;
+    int fileCount = 0;
+
+    // Read and print the names of files in the current directory
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_type == DT_REG) {  // Check if it's a regular file
+            printf("%s\n", entry->d_name);
+            fileCount++;
+        }
+    }
+
+    closedir(dir);
+
+    printf("\nTotal number of files in the current directory: %d\n", fileCount);
+
+    return EXIT_SUCCESS;
+}
+
+gcc your_program_name.c -o your_program_name
+./your_program_name
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#define BUFFER_SIZE 100
+
+int main() {
+    int pipefd[2];
+    char buffer[BUFFER_SIZE];
+
+    // Create a pipe
+    if (pipe(pipefd) == -1) {
+        perror("Pipe creation failed");
+        return EXIT_FAILURE;
+    }
+
+    pid_t pid = fork();
+
+    if (pid == -1) {
+        perror("Fork failed");
+        return EXIT_FAILURE;
+    } else if (pid == 0) {
+        // Child process
+
+        // Close the read end of the pipe
+        close(pipefd[0]);
+
+        // Write three messages to the pipe
+        write(pipefd[1], "Hello World", 12);
+        write(pipefd[1], "Hello SPPU", 11);
+        write(pipefd[1], "Linux is Funny", 15);
+
+        // Close the write end of the pipe
+        close(pipefd[1]);
+
+        exit(EXIT_SUCCESS);
+    } else {
+        // Parent process
+
+        // Close the write end of the pipe
+        close(pipefd[1]);
+
+        // Read and display messages from the pipe
+        while (read(pipefd[0], buffer, BUFFER_SIZE) > 0) {
+            printf("%s\n", buffer);
+        }
+
+        // Close the read end of the pipe
+        close(pipefd[0]);
+
+        // Wait for the child process to complete
+        wait(NULL);
+    }
+
+    return EXIT_SUCCESS;
+}
+gcc your_program_name.c -o your_program_name
+./your_program_name

@@ -1,0 +1,126 @@
+slip 16
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <time.h>
+
+void filterFilesByMonth(const char *month) {
+    DIR *dir;
+    struct dirent *entry;
+    struct stat fileStat;
+
+    // Open the current directory
+    dir = opendir(".");
+
+    if (dir == NULL) {
+        perror("Error opening directory");
+        exit(EXIT_FAILURE);
+    }
+
+    // Read directory entries
+    while ((entry = readdir(dir)) != NULL) {
+        // Check if the entry is a regular file
+        if (stat(entry->d_name, &fileStat) == 0 && S_ISREG(fileStat.st_mode)) {
+            // Convert the creation time to the month
+            char fileMonth[20];
+            strftime(fileMonth, sizeof(fileMonth), "%b", localtime(&fileStat.st_ctime));
+
+            // Check if the file was created in the specified month
+            if (strcmp(fileMonth, month) == 0) {
+                printf("%s\n", entry->d_name);
+            }
+        }
+    }
+
+    // Close the directory
+    closedir(dir);
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <month>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    const char *month = argv[1];
+
+    printf("Files created in %s:\n", month);
+    filterFilesByMonth(month);
+
+    return EXIT_SUCCESS;
+}
+
+
+gcc your_program_name.c -o your_program_name
+./your_program_name Jan
+
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <signal.h>
+
+void childSignalHandler(int signum) {
+    if (signum == SIGHUP) {
+        printf("Child received SIGHUP signal.\n");
+    } else if (signum == SIGINT) {
+        printf("Child received SIGINT signal.\n");
+    } else if (signum == SIGQUIT) {
+        printf("My DADDY has Killed me!!!\n");
+        exit(EXIT_SUCCESS);
+    }
+}
+
+int main() {
+    pid_t childPid;
+
+    // Fork a child process
+    childPid = fork();
+
+    if (childPid == -1) {
+        perror("Fork failed");
+        return EXIT_FAILURE;
+    } else if (childPid == 0) {
+        // Child process
+
+        // Set signal handlers for SIGHUP, SIGINT, and SIGQUIT
+        signal(SIGHUP, childSignalHandler);
+        signal(SIGINT, childSignalHandler);
+        signal(SIGQUIT, childSignalHandler);
+
+        // Infinite loop to keep the child process running
+        while (1) {
+            sleep(1);
+        }
+
+    } else {
+        // Parent process
+
+        // Send SIGHUP or SIGINT every 3 seconds for 30 seconds
+        for (int i = 0; i < 10; ++i) {
+            sleep(3);
+            if (i % 2 == 0) {
+                kill(childPid, SIGHUP);
+            } else {
+                kill(childPid, SIGINT);
+            }
+        }
+
+        // Send SIGQUIT to terminate the child process
+        kill(childPid, SIGQUIT);
+
+        // Wait for the child process to terminate
+        waitpid(childPid, NULL, 0);
+    }
+
+    return EXIT_SUCCESS;
+}
+
+
+gcc your_program_name.c -o your_program_name
+./your_program_name

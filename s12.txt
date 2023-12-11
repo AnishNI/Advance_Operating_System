@@ -1,0 +1,116 @@
+slip 12
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+int main() {
+    pid_t childPid, terminatedPid;
+    int status;
+
+    // Fork a child process
+    childPid = fork();
+
+    if (childPid == -1) {
+        perror("Fork failed");
+        return EXIT_FAILURE;
+    } else if (childPid == 0) {
+        // Child process
+        printf("Child process is executing...\n");
+        // Simulate some work in the child process
+        sleep(2);
+        // Exit with a status code
+        exit(EXIT_SUCCESS);
+    } else {
+        // Parent process
+
+        // Wait for the child process to terminate
+        terminatedPid = wait(&status);
+
+        if (terminatedPid == -1) {
+            perror("Wait failed");
+            return EXIT_FAILURE;
+        }
+
+        if (WIFEXITED(status)) {
+            // The child process terminated normally
+            printf("Child process with PID %d terminated with exit status: %d\n", terminatedPid, WEXITSTATUS(status));
+        } else if (WIFSIGNALED(status)) {
+            // The child process terminated due to a signal
+            printf("Child process with PID %d terminated by signal: %d\n", terminatedPid, WTERMSIG(status));
+        } else {
+            // Something unexpected happened
+            printf("Child process with PID %d terminated abnormally\n", terminatedPid);
+        }
+    }
+
+    return EXIT_SUCCESS;
+}
+
+
+gcc your_program_name.c -o your_program_name
+./your_program_name
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <string.h>
+
+typedef struct {
+    char filename[256];
+    off_t size;
+} FileInfo;
+
+// Comparison function for qsort
+int compareFileInfo(const void *a, const void *b) {
+    return ((FileInfo *)a)->size - ((FileInfo *)b)->size;
+}
+
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <file1> <file2> <file3> ...\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    int numFiles = argc - 1;
+    FileInfo *fileInfos = malloc(numFiles * sizeof(FileInfo));
+
+    if (fileInfos == NULL) {
+        perror("Memory allocation failed");
+        return EXIT_FAILURE;
+    }
+
+    // Retrieve file sizes and store in fileInfos array
+    for (int i = 0; i < numFiles; ++i) {
+        struct stat fileStat;
+        if (stat(argv[i + 1], &fileStat) == -1) {
+            perror("Error getting file information");
+            free(fileInfos);
+            return EXIT_FAILURE;
+        }
+        strcpy(fileInfos[i].filename, argv[i + 1]);
+        fileInfos[i].size = fileStat.st_size;
+    }
+
+    // Sort fileInfos array based on file sizes
+    qsort(fileInfos, numFiles, sizeof(FileInfo), compareFileInfo);
+
+    // Display file names in ascending order of sizes
+    printf("Files sorted by size (ascending):\n");
+    for (int i = 0; i < numFiles; ++i) {
+        printf("%s: %ld bytes\n", fileInfos[i].filename, (long)fileInfos[i].size);
+    }
+
+    // Cleanup
+    free(fileInfos);
+
+    return EXIT_SUCCESS;
+}
+
+
+gcc your_program_name.c -o your_program_name
+./your_program_name a.txt b.txt c.txt

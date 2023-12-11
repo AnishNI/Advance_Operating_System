@@ -1,0 +1,120 @@
+slip 15
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <dirent.h>
+#include <sys/stat.h>
+
+void filterFilesBySize(int sizeThreshold) {
+    DIR *dir;
+    struct dirent *entry;
+    struct stat fileStat;
+
+    // Open the current directory
+    dir = opendir(".");
+
+    if (dir == NULL) {
+        perror("Error opening directory");
+        exit(EXIT_FAILURE);
+    }
+
+    // Read directory entries
+    while ((entry = readdir(dir)) != NULL) {
+        // Check if the entry is a regular file
+        if (stat(entry->d_name, &fileStat) == 0 && S_ISREG(fileStat.st_mode)) {
+            // Check if the file size is greater than the specified threshold
+            if (fileStat.st_size > sizeThreshold) {
+                printf("%s (%lld bytes)\n", entry->d_name, (long long)fileStat.st_size);
+            }
+        }
+    }
+
+    // Close the directory
+    closedir(dir);
+}
+
+int main() {
+    int sizeThreshold;
+
+    // Accept size threshold from the user
+    printf("Enter the size threshold (in bytes): ");
+    scanf("%d", &sizeThreshold);
+
+    printf("Files greater than %d bytes:\n", sizeThreshold);
+    filterFilesBySize(sizeThreshold);
+
+    return EXIT_SUCCESS;
+}
+gcc your_program_name.c -o your_program_name
+./your_program_name
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <signal.h>
+
+void childHandler(int signum) {
+    (void)signum; // Avoid unused variable warning
+    int status;
+    pid_t childPid = waitpid(-1, &status, WNOHANG);
+
+    if (WIFEXITED(status)) {
+        printf("Child process %d exited with status: %d\n", childPid, WEXITSTATUS(status));
+    } else if (WIFSIGNALED(status)) {
+        printf("Child process %d terminated by signal: %d\n", childPid, WTERMSIG(status));
+    }
+}
+
+void alarmHandler(int signum) {
+    (void)signum; // Avoid unused variable warning
+    printf("Child process execution time exceeded 5 seconds. Killing child process.\n");
+    exit(EXIT_FAILURE);
+}
+
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <command>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    // Register signal handlers
+    if (signal(SIGCHLD, childHandler) == SIG_ERR) {
+        perror("Error setting child signal handler");
+        return EXIT_FAILURE;
+    }
+
+    if (signal(SIGALRM, alarmHandler) == SIG_ERR) {
+        perror("Error setting alarm signal handler");
+        return EXIT_FAILURE;
+    }
+
+    // Fork a child process
+    pid_t childPid = fork();
+
+    if (childPid == -1) {
+        perror("Fork failed");
+        return EXIT_FAILURE;
+    } else if (childPid == 0) {
+        // Child process
+        execvp(argv[1], &argv[1]);
+        // If execvp fails
+        perror("Error executing command");
+        exit(EXIT_FAILURE);
+    } else {
+        // Parent process
+        // Set an alarm for 5 seconds
+        alarm(5);
+
+        // Wait for the child process to complete
+        waitpid(childPid, NULL, 0);
+
+        // Cancel the alarm
+        alarm(0);
+    }
+
+    return EXIT_SUCCESS;
+}
+

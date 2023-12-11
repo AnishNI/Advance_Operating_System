@@ -1,0 +1,89 @@
+slip 13
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <unistd.h>
+
+// Signal handler for SIGUSR1
+void sigusr1_handler(int signum) {
+    printf("Received SIGUSR1 signal. Suspending process...\n");
+    raise(SIGSTOP);  // Suspend the process
+    printf("Process resumed.\n");
+}
+
+int main() {
+    // Register a signal handler for SIGUSR1
+    if (signal(SIGUSR1, sigusr1_handler) == SIG_ERR) {
+        perror("Signal registration failed");
+        return EXIT_FAILURE;
+    }
+
+    printf("Process is running. Send SIGUSR1 to suspend and resume.\n");
+
+    // Infinite loop to keep the process running
+    while (1) {
+        sleep(1);
+    }
+
+    return EXIT_SUCCESS;
+}
+
+
+gcc your_program_name.c -o your_program_name
+./your_program_name
+
+kill -SIGUSR1 <process_id>
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <dirent.h>
+
+void filterFiles(const char *prefix) {
+    DIR *dir;
+    struct dirent *entry;
+
+    // Open the current directory
+    dir = opendir(".");
+
+    if (dir == NULL) {
+        perror("Error opening directory");
+        exit(EXIT_FAILURE);
+    }
+
+    // Read directory entries
+    while ((entry = readdir(dir)) != NULL) {
+        // Check if the entry starts with the specified prefix
+        if (strncmp(entry->d_name, prefix, strlen(prefix)) == 0) {
+            printf("%s\n", entry->d_name);
+        }
+    }
+
+    // Close the directory
+    closedir(dir);
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <prefix>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    char *prefix = argv[1];
+
+    printf("Files beginning with '%s':\n", prefix);
+    filterFiles(prefix);
+
+    return EXIT_SUCCESS;
+}
+
+
+
+gcc your_program_name.c -o your_program_name
+./your_program_name foo
+
+
+

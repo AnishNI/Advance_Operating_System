@@ -1,0 +1,76 @@
+slip 2
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <time.h>
+
+void printFileProperties(char *filename) {
+    struct stat fileInfo;
+
+    if (stat(filename, &fileInfo) == 0) {
+        printf("File Properties for: %s\n", filename);
+        printf("Inode Number: %ld\n", (long)fileInfo.st_ino);
+        printf("Number of Hard Links: %ld\n", (long)fileInfo.st_nlink);
+        printf("File Permissions: %o\n", fileInfo.st_mode & 0777);
+        printf("File Size: %ld bytes\n", (long)fileInfo.st_size);
+        printf("Access Time: %s", ctime(&fileInfo.st_atime));
+        printf("Modification Time: %s", ctime(&fileInfo.st_mtime));
+        printf("\n");
+    } else {
+        perror("Error while getting file information");
+    }
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    printFileProperties(argv[1]);
+
+    return EXIT_SUCCESS;
+}
+
+gcc your_program_name.c -o your_program_name
+./your_program_name <filename>
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+
+// Variable to count the number of times Ctrl-C is pressed
+int ctrlCCount = 0;
+
+// Signal handler function for SIGINT (Ctrl-C)
+void sigintHandler(int signum) {
+    if (signum == SIGINT) {
+        ctrlCCount++;
+
+        if (ctrlCCount == 1) {
+            printf("\nCtrl-C pressed. Press Ctrl-C again to exit.\n");
+        } else {
+            printf("\nExiting the program.\n");
+            exit(EXIT_SUCCESS);
+        }
+    }
+}
+
+int main() {
+    // Set up signal handler for SIGINT
+    signal(SIGINT, sigintHandler);
+
+    while (1) {
+        // Your main program logic goes here
+        // The program will keep running until Ctrl-C is pressed twice
+    }
+
+    return EXIT_SUCCESS;
+}
+gcc your_program_name.c -o your_program_name
+./your_program_name

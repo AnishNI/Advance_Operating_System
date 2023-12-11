@@ -1,0 +1,123 @@
+slip 17
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <dirent.h>
+
+void listFiles() {
+    DIR *dir;
+    struct dirent *entry;
+
+    // Open the current directory
+    dir = opendir(".");
+
+    if (dir == NULL) {
+        perror("Error opening directory");
+        exit(EXIT_FAILURE);
+    }
+
+    // Read directory entries
+    int fileCount = 0;
+    while ((entry = readdir(dir)) != NULL) {
+        // Check if the entry is a regular file
+        if (entry->d_type == DT_REG) {
+            printf("%s\n", entry->d_name);
+            fileCount++;
+        }
+    }
+
+    // Close the directory
+    closedir(dir);
+
+    // Display the total number of files
+    printf("\nTotal number of files: %d\n", fileCount);
+}
+
+int main() {
+    printf("Files in the current directory:\n");
+    listFiles();
+
+    return EXIT_SUCCESS;
+}
+
+
+gcc your_program_name.c -o your_program_name
+./your_program_name
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <signal.h>
+
+void signalHandler(int signum) {
+    // Signal handler to ignore Ctrl-C (SIGINT) and Ctrl-\ (SIGQUIT)
+    (void)signum;
+}
+
+int main() {
+    // Block signals Ctrl-C (SIGINT) and Ctrl-\ (SIGQUIT) during execution
+    struct sigaction sa;
+    sa.sa_handler = signalHandler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+
+    if (sigaction(SIGINT, &sa, NULL) == -1 || sigaction(SIGQUIT, &sa, NULL) == -1) {
+        perror("Error blocking signals");
+        return EXIT_FAILURE;
+    }
+
+    int pipefd[2];
+
+    // Create a pipe
+    if (pipe(pipefd) == -1) {
+        perror("Error creating pipe");
+        return EXIT_FAILURE;
+    }
+
+    pid_t childPid;
+
+    // Fork a child process
+    if ((childPid = fork()) == -1) {
+        perror("Fork failed");
+        return EXIT_FAILURE;
+    }
+
+    if (childPid == 0) {
+        // Child process
+
+        // Redirect standard output to the write end of the pipe
+        dup2(pipefd[1], STDOUT_FILENO);
+        close(pipefd[0]);
+        close(pipefd[1]);
+
+        // Execute "ls -l" using exec
+        execlp("ls", "ls", "-l", (char *)NULL);
+        perror("Error executing ls");
+        exit(EXIT_FAILURE);
+    } else {
+        // Parent process
+
+        // Wait for the child process to complete
+        waitpid(childPid, NULL, 0);
+
+        // Redirect standard input to the read end of the pipe
+        dup2(pipefd[0], STDIN_FILENO);
+        close(pipefd[0]);
+        close(pipefd[1]);
+
+        // Execute "wc -l" using exec
+        execlp("wc", "wc", "-l", (char *)NULL);
+        perror("Error executing wc");
+        exit(EXIT_FAILURE);
+    }
+
+    return EXIT_SUCCESS;
+}
+
+
+gcc your_program_name.c -o your_program_name
+./your_program_name

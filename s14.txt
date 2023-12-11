@@ -1,0 +1,106 @@
+slip 14
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <dirent.h>
+#include <sys/stat.h>
+
+void filterFilesBySize(int sizeThreshold) {
+    DIR *dir;
+    struct dirent *entry;
+    struct stat fileStat;
+
+    // Open the current directory
+    dir = opendir(".");
+
+    if (dir == NULL) {
+        perror("Error opening directory");
+        exit(EXIT_FAILURE);
+    }
+
+    // Read directory entries
+    while ((entry = readdir(dir)) != NULL) {
+        // Check if the entry is a regular file
+        if (stat(entry->d_name, &fileStat) == 0 && S_ISREG(fileStat.st_mode)) {
+            // Check if the file size is greater than the specified threshold
+            if (fileStat.st_size > sizeThreshold) {
+                printf("%s (%lld bytes)\n", entry->d_name, (long long)fileStat.st_size);
+            }
+        }
+    }
+
+    // Close the directory
+    closedir(dir);
+}
+
+int main() {
+    int sizeThreshold;
+
+    // Accept size threshold from the user
+    printf("Enter the size threshold (in bytes): ");
+    scanf("%d", &sizeThreshold);
+
+    printf("Files greater than %d bytes:\n", sizeThreshold);
+    filterFilesBySize(sizeThreshold);
+
+    return EXIT_SUCCESS;
+}
+
+
+gcc your_program_name.c -o your_program_name
+./your_program_name
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <time.h>
+
+void displayFileProperties(const char *filename) {
+    struct stat fileStat;
+
+    // Use stat to get information about the file
+    if (stat(filename, &fileStat) == -1) {
+        perror("Error getting file information");
+        exit(EXIT_FAILURE);
+    }
+
+    // Display file properties
+    printf("File Properties for: %s\n", filename);
+    printf("Inode number: %lu\n", (unsigned long)fileStat.st_ino);
+    printf("Number of hard links: %lu\n", (unsigned long)fileStat.st_nlink);
+    printf("File permissions: %o\n", fileStat.st_mode & 0777);
+    printf("File size: %ld bytes\n", (long)fileStat.st_size);
+
+    // Convert time to a string representation
+    char accessTimeStr[20];
+    char modificationTimeStr[20];
+    strftime(accessTimeStr, sizeof(accessTimeStr), "%Y-%m-%d %H:%M:%S", localtime(&fileStat.st_atime));
+    strftime(modificationTimeStr, sizeof(modificationTimeStr), "%Y-%m-%d %H:%M:%S", localtime(&fileStat.st_mtime));
+
+    printf("Last access time: %s\n", accessTimeStr);
+    printf("Last modification time: %s\n", modificationTimeStr);
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    const char *filename = argv[1];
+
+    displayFileProperties(filename);
+
+    return EXIT_SUCCESS;
+}
+
+
+
+gcc your_program_name.c -o your_program_name
+./your_program_name your_filename
+
+

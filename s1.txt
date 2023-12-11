@@ -1,0 +1,88 @@
+slip 1
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+void printInodeAndType(char *filename) {
+    struct stat fileInfo;
+
+    if (stat(filename, &fileInfo) == 0) {
+        printf("File: %s\n", filename);
+        printf("Inode Number: %ld\n", (long)fileInfo.st_ino);
+
+        if (S_ISREG(fileInfo.st_mode))
+            printf("File Type: Regular File\n");
+        else if (S_ISDIR(fileInfo.st_mode))
+            printf("File Type: Directory\n");
+        else if (S_ISLNK(fileInfo.st_mode))
+            printf("File Type: Symbolic Link\n");
+        else
+            printf("File Type: Other\n");
+
+        printf("\n");
+    } else {
+        perror("Error while getting file information");
+    }
+}
+
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s file1 file2 ... fileN\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    for (int i = 1; i < argc; ++i) {
+        printInodeAndType(argv[i]);
+    }
+
+    return EXIT_SUCCESS;
+}
+gcc your_program_name.c -o your_program_name
+./your_program_name file1 file2 file3
+
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <signal.h>
+
+void alarmHandler(int signum) {
+    if (signum == SIGALRM) {
+        printf("Alarm is fired!\n");
+    }
+}
+
+int main() {
+    // Set up signal handler for SIGALRM
+    signal(SIGALRM, alarmHandler);
+
+    pid_t pid = fork();
+
+    if (pid == -1) {
+        perror("Fork failed");
+        return EXIT_FAILURE;
+    } else if (pid == 0) {
+        // Child process
+        sleep(2); // Sleep for 2 seconds
+        // Send SIGALRM to the parent process
+        kill(getppid(), SIGALRM);
+    } else {
+        // Parent process
+        printf("Waiting for the alarm...\n");
+        // Sleep to allow the child process to send the signal
+        sleep(5);
+    }
+
+    return EXIT_SUCCESS;
+}
+
+
+
+gcc your_program_name.c -o your_program_name
+./your_program_name
+
+

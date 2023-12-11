@@ -1,0 +1,121 @@
+slip 20
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <signal.h>
+
+void childSignalHandler(int signum) {
+    // Signal handler for the child process
+    if (signum == SIGCONT) {
+        printf("Child process resumed.\n");
+    } else if (signum == SIGTSTP) {
+        printf("Child process suspended. Press Enter to resume.\n");
+        getchar(); // Wait for Enter key
+    }
+}
+
+int main() {
+    pid_t childPid;
+
+    // Fork a child process
+    if ((childPid = fork()) == -1) {
+        perror("Fork failed");
+        return EXIT_FAILURE;
+    }
+
+    if (childPid == 0) {
+        // Child process
+
+        // Set signal handlers for SIGCONT and SIGTSTP
+        signal(SIGCONT, childSignalHandler);
+        signal(SIGTSTP, childSignalHandler);
+
+        printf("Child process is running. PID: %d\n", getpid());
+
+        // Infinite loop to keep the child process running
+        while (1) {
+            sleep(1);
+        }
+
+    } else {
+        // Parent process
+
+        printf("Parent process. Child PID: %d\n", childPid);
+
+        // Wait for a moment before sending signals
+        sleep(2);
+
+        // Suspend the child process using SIGTSTP
+        kill(childPid, SIGTSTP);
+
+        // Wait for a moment before resuming the child process
+        sleep(2);
+
+        // Resume the child process using SIGCONT
+        kill(childPid, SIGCONT);
+
+        // Wait for the child process to complete
+        waitpid(childPid, NULL, 0);
+    }
+
+    return EXIT_SUCCESS;
+}
+
+
+gcc your_program_name.c -o your_program_name
+./your_program_name
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+void identifyFileType(const char *filename) {
+    struct stat fileStat;
+
+    // Use stat to get information about the file
+    if (stat(filename, &fileStat) == -1) {
+        perror("Error getting file information");
+        return;
+    }
+
+    // Determine the file type
+    if (S_ISREG(fileStat.st_mode)) {
+        printf("File type: Regular File\n");
+    } else if (S_ISDIR(fileStat.st_mode)) {
+        printf("File type: Directory\n");
+    } else if (S_ISCHR(fileStat.st_mode)) {
+        printf("File type: Character Device\n");
+    } else if (S_ISBLK(fileStat.st_mode)) {
+        printf("File type: Block Device\n");
+    } else if (S_ISFIFO(fileStat.st_mode)) {
+        printf("File type: FIFO or Pipe\n");
+    } else if (S_ISLNK(fileStat.st_mode)) {
+        printf("File type: Symbolic Link\n");
+    } else if (S_ISSOCK(fileStat.st_mode)) {
+        printf("File type: Socket\n");
+    } else {
+        printf("File type: Unknown\n");
+    }
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    const char *filename = argv[1];
+
+    printf("Identifying the type of file: %s\n", filename);
+    identifyFileType(filename);
+
+    return EXIT_SUCCESS;
+}
+
+
+gcc your_program_name.c -o your_program_name
+./your_program_name your_filename

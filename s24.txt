@@ -1,0 +1,123 @@
+slip 24
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+void printFileTypeAndInode(const char *filename) {
+    struct stat fileStat;
+
+    // Use stat to get information about the file
+    if (stat(filename, &fileStat) == -1) {
+        perror("Error getting file information");
+        return;
+    }
+
+    // Print the file type
+    if (S_ISREG(fileStat.st_mode)) {
+        printf("File type: Regular File\n");
+    } else if (S_ISDIR(fileStat.st_mode)) {
+        printf("File type: Directory\n");
+    } else if (S_ISCHR(fileStat.st_mode)) {
+        printf("File type: Character Device\n");
+    } else if (S_ISBLK(fileStat.st_mode)) {
+        printf("File type: Block Device\n");
+    } else if (S_ISFIFO(fileStat.st_mode)) {
+        printf("File type: FIFO or Pipe\n");
+    } else if (S_ISLNK(fileStat.st_mode)) {
+        printf("File type: Symbolic Link\n");
+    } else if (S_ISSOCK(fileStat.st_mode)) {
+        printf("File type: Socket\n");
+    } else {
+        printf("File type: Unknown\n");
+    }
+
+    // Print the inode number
+    printf("Inode number: %lu\n", (unsigned long)fileStat.st_ino);
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    const char *filename = argv[1];
+
+    printf("File information for: %s\n", filename);
+    printFileTypeAndInode(filename);
+
+    return EXIT_SUCCESS;
+}
+gcc your_program_name.c -o your_program_name
+./your_program_name your_filename
+
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <signal.h>
+
+// Function to handle the death of the child signal (SIGCHLD)
+void childSignalHandler(int signum) {
+    (void)signum; // Avoids the unused parameter warning
+    printf("Child process terminated.\n");
+}
+
+// Function to handle the alarm signal (SIGALRM)
+void alarmHandler(int signum) {
+    (void)signum; // Avoids the unused parameter warning
+    printf("Child process execution time limit exceeded. Killing the child.\n");
+    exit(EXIT_FAILURE); // Terminate the parent process
+}
+
+int main() {
+    pid_t childPid;
+
+    // Set the signal handler for the death of the child signal (SIGCHLD)
+    signal(SIGCHLD, childSignalHandler);
+
+    // Set the signal handler for the alarm signal (SIGALRM)
+    signal(SIGALRM, alarmHandler);
+
+    // Fork a child process
+    if ((childPid = fork()) == -1) {
+        perror("Fork failed");
+        return EXIT_FAILURE;
+    }
+
+    if (childPid == 0) {
+        // Child process
+
+        // Execute a command or a user-defined program
+        execlp("ls", "ls", "-l", (char *)NULL);
+
+        // If execlp fails, print an error message and exit
+        perror("Error executing command");
+        exit(EXIT_FAILURE);
+    } else {
+        // Parent process
+
+        // Set an alarm for 5 seconds
+        alarm(5);
+
+        // Wait for the child process to complete
+        waitpid(childPid, NULL, 0);
+
+        // Cancel the alarm
+        alarm(0);
+    }
+
+    return EXIT_SUCCESS;
+}
+
+
+gcc your_program_name.c -o your_program_name
+./your_program_name
+
